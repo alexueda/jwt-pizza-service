@@ -2,7 +2,6 @@ const request = require('supertest');
 const app = require('./service');
 const jwt = require('jsonwebtoken');
 const config = require('./config');
-const bcrypt = require('bcrypt');
 
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
 let testUserAuthToken;
@@ -80,10 +79,8 @@ describe('Database Module', () => {
       commit: jest.fn().mockResolvedValue(),
       rollback: jest.fn().mockResolvedValue(),
     };
-    // Alias query to execute for convenience.
     fakeConnection.query = fakeConnection.execute;
 
-    // Import the DB instance and override its connection methods.
     DB = require('./database/database').DB;
     DB._getConnection = jest.fn().mockResolvedValue(fakeConnection);
     DB.getConnection = jest.fn().mockResolvedValue(fakeConnection);
@@ -146,9 +143,9 @@ describe('Database Module', () => {
   });
 
   test('addDinerOrder returns order with new id', async () => {
-    fakeConnection.execute.mockResolvedValueOnce([{ insertId: 901 }]); // dinerOrder insert
-    fakeConnection.execute.mockResolvedValue([{ }]); // for order items
-    fakeConnection.execute.mockResolvedValueOnce([[{ id: 10 }]]); // getID for menu item
+    fakeConnection.execute.mockResolvedValueOnce([{ insertId: 901 }]);
+    fakeConnection.execute.mockResolvedValue([{ }]);
+    fakeConnection.execute.mockResolvedValueOnce([[{ id: 10 }]]);
     const user = { id: 1001 };
     const order = { franchiseId: 1, storeId: 1, items: [{ menuId: 5, description: 'desc', price: 3.5 }] };
     const result = await DB.addDinerOrder(user, order);
@@ -255,7 +252,6 @@ describe('Database Module', () => {
 
   test('getOffset returns correct offset', () => {
     const offset = DB.getOffset(2, 10);
-    // (currentPage - 1) * listPerPage
     expect(offset).toBe((2 - 1) * 10);
   });
 
@@ -285,15 +281,10 @@ describe('Database Module', () => {
 
 //Routes tests
 
-// ========================
-// Routes Tests (Auth, Franchise, Order)
-// ========================
 describe('Routes Tests', () => {
-  // Import DB and Role from the database module (already loaded by service.js)
   const { DB, Role } = require('./database/database');
 
   beforeEach(() => {
-    // Override all DB functions with stubs for the routes tests.
     DB.addUser = jest.fn();
     DB.getUser = jest.fn();
     DB.loginUser = jest.fn();
@@ -313,7 +304,7 @@ describe('Routes Tests', () => {
     DB.addDinerOrder = jest.fn();
   });
 
-  // ---- Auth Routes ----
+  //Auth Routes
   describe('Auth Routes', () => {
     test('POST /api/auth registers a new user', async () => {
       const newUser = { name: 'Route Test', email: 'route@test.com', password: 'secret' };
@@ -370,7 +361,7 @@ describe('Routes Tests', () => {
     });
   });
 
-  // ---- Franchise Routes ----
+  //Franchise Routes
   describe('Franchise Routes', () => {
     test('GET /api/franchise returns franchises', async () => {
       const franchises = [{ id: 1, name: 'Franchise A' }];

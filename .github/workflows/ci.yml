@@ -5,7 +5,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-
 jobs:
   build:
     name: Build
@@ -22,6 +21,7 @@ jobs:
           - '3306:3306'
         options: >-
           --health-cmd "mysqladmin ping -ptempdbpassword" --health-interval 10s --health-start-period 10s --health-timeout 5s --health-retries 10
+
 
     steps:
       - name: Checkout repo
@@ -46,15 +46,15 @@ jobs:
               connection: {
                 host: '127.0.0.1',
                 user: 'root',
-                password: 'tempdbpassword',  # Use your test DB password if different.
+                password: 'tempdbpassword',
                 database: 'pizza',
                 connectTimeout: 60000,
               },
               listPerPage: 10,
             },
             factory: {
-              url: 'https://pizza-factory.cs329.click',  # Replace with your factory URL if needed.
-              apiKey: '${{ secrets.FACTORY_API_KEY }}'
+              url: 'https://pizza.sharenote.link',
+              apiKey: '${{ secrets.FACTORY_API_KEY }}',
             },
           };" > src/config.js
 
@@ -76,5 +76,5 @@ jobs:
       - name: Update coverage
         run: |
           coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
-          color=$(echo "$coverage < 80" | bc -l | awk '{if ($1) print "red"; else print "green"}')
+          color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
           curl https://img.shields.io/badge/Coverage-$coverage_pct%25-$color -o coverageBadge.svg

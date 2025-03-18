@@ -1,18 +1,5 @@
 const os = require('os');
-
-// config.js が存在しない場合、環境変数から設定を読み込む
-let config;
-try {
-  config = require('./config');
-} catch (error) {
-  config = {
-    metrics: {
-      source: process.env.METRICS_SOURCE || 'jwt-pizza-service',
-      url: process.env.METRICS_URL || 'https://otlp-gateway-prod-us-west-0.grafana.net/otlp/v1/metrics',
-      apiKey: process.env.METRICS_API_KEY || 'YOUR_DEFAULT_API_KEY',
-    },
-  };
-}
+const config = require('./config'); // 環境変数等から設定を読み込む
 
 // ── CPU 使用率を計算する関数（％） ─────────────────────────────
 function getCpuUsagePercentage() {
@@ -31,7 +18,7 @@ function getMemoryUsagePercentage() {
 }
 
 // ── MetricBuilder クラス ─────────────────────────────
-// メトリクスの文字列を蓄積するクラス
+// 各種メトリクスの文字列を蓄積するためのシンプルなクラス
 class MetricBuilder {
   constructor() {
     this.metrics = [];
@@ -45,7 +32,7 @@ class MetricBuilder {
 }
 
 // ── HTTP リクエストメトリクス ─────────────────────────────
-// Express ミドルウェアとしてリクエスト数をカウント
+// Express ミドルウェアとして利用できる requestTracker
 function requestTracker(req, res, next) {
   if (!global.httpRequestCount) {
     global.httpRequestCount = 0;
@@ -62,7 +49,7 @@ function httpMetrics(buf) {
 }
 
 // ── ユーザーメトリクス ─────────────────────────────
-// ランダムなアクティブユーザー数をシミュレーションで報告
+// シミュレーションとしてランダムなアクティブユーザー数を報告
 function userMetrics(buf) {
   const activeUsers = Math.floor(Math.random() * 100) + 1;
   buf.add(`active_users_total{source="${config.metrics.source}"} ${activeUsers}`);
@@ -92,7 +79,7 @@ function systemMetrics(buf) {
 }
 
 // ── ピザ関連メトリクス ─────────────────────────────
-// シミュレーションとして、ピザ販売関連のメトリクスを報告
+// 売れたピザ数、ピザ作成失敗数、売上を報告
 function purchaseMetrics(buf) {
   const sold = global.pizzaSold || 0;
   const failures = global.pizzaCreationFailures || 0;
@@ -106,16 +93,16 @@ function purchaseMetrics(buf) {
 }
 
 // ── レイテンシメトリクス ─────────────────────────────
-// サービスエンドポイントおよびピザ作成 API の遅延（秒単位）を報告
+// サービスエンドポイントとピザ作成 API の遅延（秒単位）を報告
 function latencyMetrics(buf) {
-  const serviceLatencyMs = Math.random() * 1000; // 0～1000ms
-  const pizzaCreationLatencyMs = Math.random() * 2000; // 0～2000ms
+  const serviceLatencyMs = Math.random() * 1000;      // 0～1000ms
+  const pizzaCreationLatencyMs = Math.random() * 2000;  // 0～2000ms
   buf.add(`service_latency_seconds{source="${config.metrics.source}"} ${(serviceLatencyMs / 1000).toFixed(2)}`);
   buf.add(`pizza_creation_latency_seconds{source="${config.metrics.source}"} ${(pizzaCreationLatencyMs / 1000).toFixed(2)}`);
 }
 
 // ── 定期レポート ─────────────────────────────
-// 指定した期間ごとにすべてのメトリクスを収集し、Grafana に送信する
+// 指定した間隔ごとにすべてのメトリクスを収集し、Grafana に送信する
 function sendMetricsPeriodically(period) {
   setInterval(() => {
     try {
@@ -129,14 +116,14 @@ function sendMetricsPeriodically(period) {
       
       const metricsData = buf.toString('\n');
       sendMetricToGrafana(metricsData);
-    } catch (error) {
-      console.log('Error sending metrics', error);
+    } catch (err) {
+      console.log('Error sending metrics', err);
     }
   }, period);
 }
 
 // ── Grafana への送信 ─────────────────────────────
-// Grafana Cloud の URL にメトリクスデータを送信する関数
+// Grafana Cloud の URL にメトリクスデータを送信する
 function sendMetricToGrafana(metrics) {
   fetch(config.metrics.url, {
     method: 'POST',
@@ -155,8 +142,8 @@ function sendMetricToGrafana(metrics) {
         console.log('Metrics sent successfully');
       }
     })
-    .catch((error) => {
-      console.error('Error pushing metrics:', error);
+    .catch((err) => {
+      console.error('Error pushing metrics:', err);
     });
 }
 

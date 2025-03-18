@@ -1,8 +1,20 @@
 const os = require('os');
-const config = require('./config');
 
-// ── システムメトリクスの取得 ─────────────────────────────
-// CPU 使用率を計算する関数（％）
+// config.js が存在しない場合、環境変数から設定を読み込む
+let config;
+try {
+  config = require('./config');
+} catch (error) {
+  config = {
+    metrics: {
+      source: process.env.METRICS_SOURCE || 'jwt-pizza-service',
+      url: process.env.METRICS_URL || 'https://otlp-gateway-prod-us-west-0.grafana.net/otlp/v1/metrics',
+      apiKey: process.env.METRICS_API_KEY || 'YOUR_DEFAULT_API_KEY',
+    },
+  };
+}
+
+// ── CPU 使用率を計算する関数（％） ─────────────────────────────
 function getCpuUsagePercentage() {
   const loadAvg = os.loadavg()[0];
   const cpuCount = os.cpus().length;
@@ -10,7 +22,7 @@ function getCpuUsagePercentage() {
   return (cpuUsage * 100).toFixed(2);
 }
 
-// メモリ使用率を計算する関数（％）
+// ── メモリ使用率を計算する関数（％） ─────────────────────────────
 function getMemoryUsagePercentage() {
   const totalMemory = os.totalmem();
   const freeMemory = os.freemem();
@@ -19,7 +31,7 @@ function getMemoryUsagePercentage() {
 }
 
 // ── MetricBuilder クラス ─────────────────────────────
-// 各メトリクスの文字列をバッファに追加するためのクラス
+// メトリクスの文字列を蓄積するクラス
 class MetricBuilder {
   constructor() {
     this.metrics = [];
@@ -33,9 +45,8 @@ class MetricBuilder {
 }
 
 // ── HTTP リクエストメトリクス ─────────────────────────────
-// Express ミドルウェアとして利用できる requestTracker を定義
+// Express ミドルウェアとしてリクエスト数をカウント
 function requestTracker(req, res, next) {
-  // グローバル変数でリクエスト数をカウント（シミュレーション用）
   if (!global.httpRequestCount) {
     global.httpRequestCount = 0;
   }
@@ -45,22 +56,20 @@ function requestTracker(req, res, next) {
 
 // 定期レポート時に HTTP リクエスト数を報告する関数
 function httpMetrics(buf) {
-  // 例：グローバル変数から取得したリクエスト数をメトリクスとして追加
   const count = global.httpRequestCount || 0;
   buf.add(`http_requests_total{source="${config.metrics.source}"} ${count}`);
-  // カウンターはリセットする
   global.httpRequestCount = 0;
 }
 
 // ── ユーザーメトリクス ─────────────────────────────
-// シミュレーションとして、ランダムなアクティブユーザー数を報告
+// ランダムなアクティブユーザー数をシミュレーションで報告
 function userMetrics(buf) {
   const activeUsers = Math.floor(Math.random() * 100) + 1;
   buf.add(`active_users_total{source="${config.metrics.source}"} ${activeUsers}`);
 }
 
 // ── 認証メトリクス ─────────────────────────────
-// シミュレーションとして、グローバル変数に保持している認証試行、成功、失敗を報告
+// グローバル変数に保持している認証試行、成功、失敗を報告
 function authMetrics(buf) {
   const attempts = global.authAttempts || 0;
   const success = global.authSuccess || 0;
@@ -68,7 +77,6 @@ function authMetrics(buf) {
   buf.add(`auth_attempts_total{source="${config.metrics.source}"} ${attempts}`);
   buf.add(`auth_success_total{source="${config.metrics.source}"} ${success}`);
   buf.add(`auth_fail_total{source="${config.metrics.source}"} ${failure}`);
-  // カウンターをリセット
   global.authAttempts = 0;
   global.authSuccess = 0;
   global.authFailure = 0;
@@ -92,16 +100,14 @@ function purchaseMetrics(buf) {
   buf.add(`pizza_sold_total{source="${config.metrics.source}"} ${sold}`);
   buf.add(`pizza_creation_failures_total{source="${config.metrics.source}"} ${failures}`);
   buf.add(`pizza_revenue_total{source="${config.metrics.source}"} ${revenue}`);
-  // カウンターをリセット
   global.pizzaSold = 0;
   global.pizzaCreationFailures = 0;
   global.pizzaRevenue = 0;
 }
 
 // ── レイテンシメトリクス ─────────────────────────────
-// サービスエンドポイントおよびピザ作成 API の遅延を報告（秒単位）
+// サービスエンドポイントおよびピザ作成 API の遅延（秒単位）を報告
 function latencyMetrics(buf) {
-  // シミュレーションとしてランダムな値を生成
   const serviceLatencyMs = Math.random() * 1000; // 0～1000ms
   const pizzaCreationLatencyMs = Math.random() * 2000; // 0～2000ms
   buf.add(`service_latency_seconds{source="${config.metrics.source}"} ${(serviceLatencyMs / 1000).toFixed(2)}`);
@@ -114,7 +120,6 @@ function sendMetricsPeriodically(period) {
   setInterval(() => {
     try {
       const buf = new MetricBuilder();
-      // 各メトリクスをバッファに追加
       httpMetrics(buf);
       systemMetrics(buf);
       userMetrics(buf);
@@ -131,7 +136,7 @@ function sendMetricsPeriodically(period) {
 }
 
 // ── Grafana への送信 ─────────────────────────────
-// Grafana Cloud の URL にメトリクスデータを送信する
+// Grafana Cloud の URL にメトリクスデータを送信する関数
 function sendMetricToGrafana(metrics) {
   fetch(config.metrics.url, {
     method: 'POST',
@@ -157,5 +162,5 @@ function sendMetricToGrafana(metrics) {
 
 module.exports = {
   sendMetricsPeriodically,
-  requestTracker, 
+  requestTracker,
 };

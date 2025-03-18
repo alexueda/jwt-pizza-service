@@ -1,5 +1,5 @@
 const os = require('os');
-const config = require('./config'); // 環境変数等から設定を読み込む
+const config = require('../config'); // 環境変数等から設定を読み込む
 
 // ── CPU 使用率を計算する関数（％） ─────────────────────────────
 function getCpuUsagePercentage() {

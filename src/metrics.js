@@ -155,8 +155,7 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-// ── エクスポート ─────────────────────────────
 module.exports = {
   sendMetricsPeriodically,
-  requestTracker, // Express ミドルウェアとして利用可能
+  requestTracker, 
 };

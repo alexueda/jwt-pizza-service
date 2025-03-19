@@ -1,8 +1,12 @@
 const config = require('./config');
 const os = require('os');
 
-// グローバル変数（各種メトリクスのカウンター）
+// Global counters for various metrics
 let requests = 0;
+let getRequests = 0;
+let postRequests = 0;
+let putRequests = 0;
+let deleteRequests = 0;
 let latency = 0;
 let pizzaSold = 0;
 let pizzaCreationFailures = 0;
@@ -11,13 +15,29 @@ let authAttempts = 0;
 let authSuccess = 0;
 let authFailure = 0;
 
-// Express のミドルウェアとして、HTTP リクエスト数をカウントする関数
+// Express middleware to count HTTP requests by method
 function requestTracker(req, res, next) {
+  // Total request count
   requests++;
+  // Increment the counter for each HTTP method
+  switch (req.method) {
+    case 'GET':
+      getRequests++;
+      break;
+    case 'POST':
+      postRequests++;
+      break;
+    case 'PUT':
+      putRequests++;
+      break;
+    case 'DELETE':
+      deleteRequests++;
+      break;
+  }
   next();
 }
 
-// システムメトリクス計算用関数（CPU, メモリ）
+// System metrics calculation functions (CPU, memory)
 function getCpuUsagePercentage() {
   const loadAvg = os.loadavg()[0];
   const cpuCount = os.cpus().length;
@@ -31,23 +51,31 @@ function getMemoryUsagePercentage() {
   return ((usedMemory / totalMemory) * 100).toFixed(2);
 }
 
-// 1秒ごとに各種メトリクスを生成し Grafana に送信する
+// Send metrics every second
 setInterval(() => {
-  // システムメトリクス
+  // System metrics
   const cpuValue = Math.floor(getCpuUsagePercentage());
   const memoryValue = Math.floor(getMemoryUsagePercentage());
   sendMetricToGrafana('cpu', cpuValue, 'gauge', '%');
   sendMetricToGrafana('memory', memoryValue, 'gauge', '%');
   
-  // HTTP リクエスト数
+  // HTTP request metrics
   sendMetricToGrafana('requests', requests, 'sum', '1');
+  sendMetricToGrafana('get_requests', getRequests, 'sum', '1');
+  sendMetricToGrafana('post_requests', postRequests, 'sum', '1');
+  sendMetricToGrafana('put_requests', putRequests, 'sum', '1');
+  sendMetricToGrafana('delete_requests', deleteRequests, 'sum', '1');
   requests = 0;
+  getRequests = 0;
+  postRequests = 0;
+  putRequests = 0;
+  deleteRequests = 0;
   
-  // レイテンシ
+  // Latency metric
   sendMetricToGrafana('latency', latency, 'sum', 'ms');
   latency = 0;
   
-  // ピザ関連メトリクス
+  // Pizza-related metrics
   sendMetricToGrafana('pizza_sold', pizzaSold, 'sum', '1');
   sendMetricToGrafana('pizza_creation_failures', pizzaCreationFailures, 'sum', '1');
   sendMetricToGrafana('pizza_revenue', pizzaRevenue, 'sum', 'USD');
@@ -55,7 +83,7 @@ setInterval(() => {
   pizzaCreationFailures = 0;
   pizzaRevenue = 0;
   
-  // 認証メトリクス
+  // Authentication metrics
   sendMetricToGrafana('auth_attempts', authAttempts, 'sum', '1');
   sendMetricToGrafana('auth_success', authSuccess, 'sum', '1');
   sendMetricToGrafana('auth_fail', authFailure, 'sum', '1');
@@ -65,7 +93,7 @@ setInterval(() => {
   
 }, 1000);
 
-// Grafana にメトリクスを送信する関数
+// Function to send metrics to Grafana
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
   const metric = {
     resourceMetrics: [

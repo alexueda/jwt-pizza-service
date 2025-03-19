@@ -1,4 +1,5 @@
 const config = require('./config');
+const os = require('os');
 
 // HTTPリクエストの累積カウンター
 let totalRequests = 0;
@@ -89,29 +90,26 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
     });
 }
 
-// CPU使用率を計算する関数
+// Provided CPU and memory functions
 function getCpuUsagePercentage() {
-    const loadAvg = os.loadavg()[0];
-    const cpuCount = os.cpus().length;
-    const cpuUsage = (loadAvg / cpuCount) * 100;
-    return Number(cpuUsage.toFixed(2));
+    const cpuUsage = os.loadavg()[0] / os.cpus().length;
+    return cpuUsage.toFixed(2) * 100;
   }
   
-  // メモリ使用率を計算する関数
   function getMemoryUsagePercentage() {
     const totalMemory = os.totalmem();
     const freeMemory = os.freemem();
     const usedMemory = totalMemory - freeMemory;
     const memoryUsage = (usedMemory / totalMemory) * 100;
-    return Number(memoryUsage.toFixed(2));
+    return memoryUsage.toFixed(2);
   }
   
-  // CPU とメモリのメトリクスを1秒ごとに送信
+  // CPU とメモリのメトリクス：1秒ごとに送信
   setInterval(() => {
     sendMetricToGrafana('cpu', getCpuUsagePercentage(), 'gauge', '%');
     sendMetricToGrafana('memory', getMemoryUsagePercentage(), 'gauge', '%');
-  }, 1000);
-  
+  }, 1000);  
+
 
 module.exports = {
   requestTracker,

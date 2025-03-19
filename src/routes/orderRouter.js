@@ -78,7 +78,7 @@ orderRouter.post(
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const orderReq = req.body;
-    const order = await DB.addDinerOrder(req.user, orderReq);
+    const order = await DB.addDinerOrder(req.user, orderReq); //(grab this to send to grafana)
     const r = await fetch(`${config.factory.url}/api/order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },

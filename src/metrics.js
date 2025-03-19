@@ -15,7 +15,6 @@ let totalRevenue = 0.0;
 let serviceLatency = 0;
 let pizzaLatency = 0;
 
-// Track HTTP requests
 function requestTracker(req, res, next) {
   totalRequests++;
   if (req.method === 'GET') {
@@ -41,9 +40,9 @@ setInterval(() => {
 // Track active users on login/logout
 function trackActiveUsers(req, res, next) {
     if (req.method === 'PUT' && req.url === '/api/auth') {
-        activeUsers++;
+        activeUsers++; // Increase active users on login
     } else if (req.method === 'DELETE' && req.url === '/api/auth') {
-        activeUsers = Math.max(0, activeUsers - 1);
+        activeUsers = Math.max(0, activeUsers - 1); // Decrease active users on logout, but never go below 0
     }
     next();
 }
@@ -51,7 +50,6 @@ function trackActiveUsers(req, res, next) {
 setInterval(() => {
     sendMetricToGrafana('active_users', activeUsers, 'gauge', 'count');
 }, 60000);
-
 
 // Provided CPU and memory functions
 function getCpuUsagePercentage() {
@@ -72,10 +70,10 @@ function getCpuUsagePercentage() {
     sendMetricToGrafana('memory', getMemoryUsagePercentage(), 'gauge', '%');
   }, 1000);  
 
-
-// Track authentication attempts(if this not working go to end point and check the status code)insted of middleway call function increma`=ent the value
+// Track authentication attempts(if this not working go to end point and check the status code)insted of middleway call function increma`=ent the value)
 function trackAuthAttempts(req, res, next) {
     if (req.method === 'PUT' && req.url === '/api/auth') {
+      // Capture the response to determine success or failure
       res.on('finish', () => {
         if (res.statusCode === 200) {
           successfulAuthAttempts++;
@@ -87,15 +85,15 @@ function trackAuthAttempts(req, res, next) {
     next();
   }
   
-  // Send authentication attempts to Grafana every minute
   setInterval(() => {
     sendMetricToGrafana('successful_auth_attempts', successfulAuthAttempts, 'sum', '1');
     sendMetricToGrafana('failed_auth_attempts', failedAuthAttempts, 'sum', '1');
+    // Reset counters every minute
     successfulAuthAttempts = 0;
     failedAuthAttempts = 0;
   }, 60000);
 
-// Track pizza metrics(do in the order router, in the end point grab value)
+//Track pizza metrics(do in the order router, in the end point grab value)
 function trackPizzaMetrics(req, res, next) {
     if (req.method === 'POST' && req.url === '/api/order') {
         const start = Date.now();
@@ -139,8 +137,9 @@ function trackLatency(req, res, next) {
     });
     next();
 }
+
 //Track Pizza Creation Latency
-function trackPizzaLatency(req, res, next) { //use console debug to check the status code
+function trackPizzaLatency(req, res, next) {
     if (req.method === 'POST' && req.url === '/api/order') {
         const start = Date.now();
         res.on('finish', () => {

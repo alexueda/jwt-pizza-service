@@ -1,4 +1,3 @@
-const fetch = require('node-fetch'); // Added for Node environments that lack a built-in fetch
 const config = require('./config');
 
 let requests = 0;

@@ -1,41 +1,39 @@
 const config = require('./config');
 
-let requests = 0;
+// HTTPリクエストの累積カウンター
+let totalRequests = 0;
 let getRequests = 0;
 let postRequests = 0;
 let putRequests = 0;
 let deleteRequests = 0;
-let latency = 0;
 
+function requestTracker(req, res, next) {
+  totalRequests++;
+  if (req.method === 'GET') {
+    getRequests++;
+  } else if (req.method === 'POST') {
+    postRequests++;
+  } else if (req.method === 'PUT') {
+    putRequests++;
+  } else if (req.method === 'DELETE') {
+    deleteRequests++;
+  }
+  next();
+}
+
+// 1分ごとに現在のリクエストカウンターを Grafana に送信
 setInterval(() => {
-  const cpuValue = Math.floor(Math.random() * 100) + 1;
-  sendMetricToGrafana('cpu', cpuValue, 'gauge', '%');
-
-  // Total HTTP requests
-  requests += Math.floor(Math.random() * 200) + 1;
-  sendMetricToGrafana('requests', requests, 'sum', '1');
-
-  // GET requests
-  getRequests += Math.floor(Math.random() * 50) + 1;
+  sendMetricToGrafana('total_requests', totalRequests, 'sum', '1');
   sendMetricToGrafana('get_requests', getRequests, 'sum', '1');
-
-  // POST requests
-  postRequests += Math.floor(Math.random() * 50) + 1;
   sendMetricToGrafana('post_requests', postRequests, 'sum', '1');
-
-  // PUT requests
-  putRequests += Math.floor(Math.random() * 50) + 1;
   sendMetricToGrafana('put_requests', putRequests, 'sum', '1');
-
-  // DELETE requests
-  deleteRequests += Math.floor(Math.random() * 50) + 1;
   sendMetricToGrafana('delete_requests', deleteRequests, 'sum', '1');
+}, 60000);
 
-  // Latency metric
-  latency += Math.floor(Math.random() * 200) + 1;
-  sendMetricToGrafana('latency', latency, 'sum', 'ms');
-}, 1000);
-
+/**
+ * Grafana にメトリクスを送信する関数
+ * サンプルコードと同様の形式で、metricName, metricValue, type, unit を受け取ってデータを送信します。
+ */
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
   const metric = {
     resourceMetrics: [
@@ -69,15 +67,18 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
   }
 
   const body = JSON.stringify(metric);
-  fetch(config.url, {
+  fetch(`${config.metrics.url}`, {
     method: 'POST',
     body: body,
-    headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${config.metrics.apiKey}`,
+      'Content-Type': 'application/json'
+    },
   })
     .then((response) => {
       if (!response.ok) {
         response.text().then((text) => {
-          console.error(`Failed to push metrics data to Grafana: ${text}\n${body}`);
+          console.error(`Failed to push ${metricName}: ${text}\n${body}`);
         });
       } else {
         console.log(`Pushed ${metricName}`);
@@ -87,3 +88,31 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
       console.error('Error pushing metrics:', error);
     });
 }
+
+// CPU使用率を計算する関数
+function getCpuUsagePercentage() {
+    const loadAvg = os.loadavg()[0];
+    const cpuCount = os.cpus().length;
+    const cpuUsage = (loadAvg / cpuCount) * 100;
+    return Number(cpuUsage.toFixed(2));
+  }
+  
+  // メモリ使用率を計算する関数
+  function getMemoryUsagePercentage() {
+    const totalMemory = os.totalmem();
+    const freeMemory = os.freemem();
+    const usedMemory = totalMemory - freeMemory;
+    const memoryUsage = (usedMemory / totalMemory) * 100;
+    return Number(memoryUsage.toFixed(2));
+  }
+  
+  // CPU とメモリのメトリクスを1秒ごとに送信
+  setInterval(() => {
+    sendMetricToGrafana('cpu', getCpuUsagePercentage(), 'gauge', '%');
+    sendMetricToGrafana('memory', getMemoryUsagePercentage(), 'gauge', '%');
+  }, 1000);
+  
+
+module.exports = {
+  requestTracker,
+};

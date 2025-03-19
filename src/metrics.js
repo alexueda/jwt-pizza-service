@@ -1,3 +1,4 @@
+const fetch = require('node-fetch'); // Added for Node environments that lack a built-in fetch
 const config = require('./config');
 
 let requests = 0;
@@ -69,7 +70,7 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
   }
 
   const body = JSON.stringify(metric);
-  fetch(`${config.url}`, {
+  fetch(config.url, {
     method: 'POST',
     body: body,
     headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },

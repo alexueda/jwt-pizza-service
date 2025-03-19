@@ -6,6 +6,7 @@ let getRequests = 0;
 let postRequests = 0;
 let putRequests = 0;
 let deleteRequests = 0;
+let activeUsers = 0;
 
 function requestTracker(req, res, next) {
   totalRequests++;
@@ -28,6 +29,21 @@ setInterval(() => {
   sendMetricToGrafana('put_requests', putRequests, 'sum', '1');
   sendMetricToGrafana('delete_requests', deleteRequests, 'sum', '1');
 }, 60000);
+
+// Track active users on login/logout
+function trackActiveUsers(req, res, next) {
+    if (req.method === 'PUT' && req.url === '/api/auth') {
+        activeUsers++; // Increase active users on login
+    } else if (req.method === 'DELETE' && req.url === '/api/auth') {
+        activeUsers = Math.max(0, activeUsers - 1); // Decrease active users on logout, but never go below 0
+    }
+    next();
+}
+
+setInterval(() => {
+    sendMetricToGrafana('active_users', activeUsers, 'gauge', 'count');
+}, 60000);
+  
 
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
   const metric = {
@@ -106,4 +122,5 @@ function getCpuUsagePercentage() {
 
 module.exports = {
   requestTracker,
+  trackActiveUsers,
 };

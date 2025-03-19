@@ -1,5 +1,5 @@
 const express = require('express');
-const { requestTracker } = require('./metrics'); // Import the requestTracker function
+const { requestTracker, trackActiveUsers } = require('./metrics');  // Import the requestTracker and trackActiveUsers middleware
 const { authRouter, setAuthUser } = require('./routes/authRouter.js');
 const orderRouter = require('./routes/orderRouter.js');
 const franchiseRouter = require('./routes/franchiseRouter.js');
@@ -11,6 +11,7 @@ app.use(express.json());
 app.use(setAuthUser);
 
 app.use(requestTracker); // Add the requestTracker middleware
+app.use(trackActiveUsers); // Add the trackActiveUsers middleware
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');

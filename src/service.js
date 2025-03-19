@@ -1,4 +1,5 @@
 const express = require('express');
+const { requestTracker } = require('./metrics'); // Import the requestTracker function
 const { authRouter, setAuthUser } = require('./routes/authRouter.js');
 const orderRouter = require('./routes/orderRouter.js');
 const franchiseRouter = require('./routes/franchiseRouter.js');
@@ -8,6 +9,9 @@ const config = require('./config.js');
 const app = express();
 app.use(express.json());
 app.use(setAuthUser);
+
+app.use(requestTracker); // Add the requestTracker middleware
+
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');

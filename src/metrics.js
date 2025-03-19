@@ -1,7 +1,6 @@
 const config = require('./config');
 const os = require('os');
 
-// HTTPリクエストの累積カウンター
 let totalRequests = 0;
 let getRequests = 0;
 let postRequests = 0;
@@ -22,7 +21,6 @@ function requestTracker(req, res, next) {
   next();
 }
 
-// 1分ごとに現在のリクエストカウンターを Grafana に送信
 setInterval(() => {
   sendMetricToGrafana('total_requests', totalRequests, 'sum', '1');
   sendMetricToGrafana('get_requests', getRequests, 'sum', '1');
@@ -31,10 +29,6 @@ setInterval(() => {
   sendMetricToGrafana('delete_requests', deleteRequests, 'sum', '1');
 }, 60000);
 
-/**
- * Grafana にメトリクスを送信する関数
- * サンプルコードと同様の形式で、metricName, metricValue, type, unit を受け取ってデータを送信します。
- */
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
   const metric = {
     resourceMetrics: [
@@ -103,8 +97,7 @@ function getCpuUsagePercentage() {
     const memoryUsage = (usedMemory / totalMemory) * 100;
     return memoryUsage.toFixed(2);
   }
-  
-  // CPU とメモリのメトリクス：1秒ごとに送信
+
   setInterval(() => {
     sendMetricToGrafana('cpu', getCpuUsagePercentage(), 'gauge', '%');
     sendMetricToGrafana('memory', getMemoryUsagePercentage(), 'gauge', '%');

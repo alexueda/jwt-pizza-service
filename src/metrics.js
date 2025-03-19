@@ -51,26 +51,7 @@ setInterval(() => {
     sendMetricToGrafana('active_users', activeUsers, 'gauge', 'count');
 }, 60000);
 
-// Provided CPU and memory functions
-function getCpuUsagePercentage() {
-    const cpuUsage = os.loadavg()[0] / os.cpus().length;
-    return cpuUsage.toFixed(2) * 100;
-  }
-  
-  function getMemoryUsagePercentage() {
-    const totalMemory = os.totalmem();
-    const freeMemory = os.freemem();
-    const usedMemory = totalMemory - freeMemory;
-    const memoryUsage = (usedMemory / totalMemory) * 100;
-    return memoryUsage.toFixed(2);
-  }
-
-  setInterval(() => {
-    sendMetricToGrafana('cpu', getCpuUsagePercentage(), 'gauge', '%');
-    sendMetricToGrafana('memory', getMemoryUsagePercentage(), 'gauge', '%');
-  }, 1000);  
-
-// Track authentication attempts(if this not working go to end point and check the status code)insted of middleway call function increma`=ent the value)
+// Track authentication attempts
 function trackAuthAttempts(req, res, next) {
     if (req.method === 'PUT' && req.url === '/api/auth') {
       // Capture the response to determine success or failure
@@ -85,15 +66,16 @@ function trackAuthAttempts(req, res, next) {
     next();
   }
   
+  // Send authentication attempts to Grafana every minute
   setInterval(() => {
     sendMetricToGrafana('successful_auth_attempts', successfulAuthAttempts, 'sum', '1');
     sendMetricToGrafana('failed_auth_attempts', failedAuthAttempts, 'sum', '1');
+  
     // Reset counters every minute
     successfulAuthAttempts = 0;
     failedAuthAttempts = 0;
   }, 60000);
 
-//Track pizza metrics(do in the order router, in the end point grab value)
 function trackPizzaMetrics(req, res, next) {
     if (req.method === 'POST' && req.url === '/api/order') {
         const start = Date.now();
@@ -215,6 +197,26 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
       console.error('Error pushing metrics:', error);
     });
 }
+
+// Provided CPU and memory functions
+function getCpuUsagePercentage() {
+    const cpuUsage = os.loadavg()[0] / os.cpus().length;
+    return cpuUsage.toFixed(2) * 100;
+  }
+  
+  function getMemoryUsagePercentage() {
+    const totalMemory = os.totalmem();
+    const freeMemory = os.freemem();
+    const usedMemory = totalMemory - freeMemory;
+    const memoryUsage = (usedMemory / totalMemory) * 100;
+    return memoryUsage.toFixed(2);
+  }
+
+  setInterval(() => {
+    sendMetricToGrafana('cpu', getCpuUsagePercentage(), 'gauge', '%');
+    sendMetricToGrafana('memory', getMemoryUsagePercentage(), 'gauge', '%');
+  }, 1000);  
+
 
 module.exports = {
   requestTracker,

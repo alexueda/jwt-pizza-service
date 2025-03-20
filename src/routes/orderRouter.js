@@ -4,12 +4,6 @@ const { Role, DB } = require('../database/database.js');
 const { authRouter } = require('./authRouter.js');
 const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
 
-// Import the sendMetricToGrafana function
-const{ sendMetricToGrafana } = require('../metrics.js');
-let soldPizzas = 0;
-let failedPizzas = 0;
-let totalRevenue = 0.0;
-
 const orderRouter = express.Router();
 
 orderRouter.endpoints = [
@@ -84,68 +78,17 @@ orderRouter.post(
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const orderReq = req.body;
-    let order;
-    try {
-      order = await DB.addDinerOrder(req.user, orderReq);
-    } catch (error) {
-      // If order creation fails, count as a failed pizza order
-      failedPizzas++;
-      sendMetricToGrafana('failed_pizzas', failedPizzas, 'sum', '1');
-      throw error;
-    }
-
-    // Start timing for pizza creation latency
-    const startTime = Date.now();
-
-    let factoryResponse;
-    try {
-      factoryResponse = await fetch(`${config.factory.url}/api/order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          authorization: `Bearer ${config.factory.apiKey}`,
-        },
-        body: JSON.stringify({
-          diner: { id: req.user.id, name: req.user.name, email: req.user.email },
-          order,
-        }),
-      });
-    } catch (error) {
-      // If the factory call fails, update failure metric and return an error
-      failedPizzas++;
-      sendMetricToGrafana('failed_pizzas', failedPizzas, 'sum', '1');
-      console.error("Error contacting factory:", error);
-      return res.status(500).send({ message: 'Failed to connect to factory' });
-    }
-
-    // Calculate and send pizza creation latency
-    const pizzaLatency = Date.now() - startTime;
-    sendMetricToGrafana('pizza_creation_latency', pizzaLatency, 'gauge', 'ms');
-
-    const factoryData = await factoryResponse.json();
-
-    if (factoryResponse.ok) {
-      // Update metrics for sold pizzas and revenue
-      const pizzasOrdered = order.items.length;
-      soldPizzas += pizzasOrdered;
-      const orderRevenue = order.items.reduce((sum, item) => sum + item.price, 0);
-      totalRevenue += orderRevenue;
-
-      sendMetricToGrafana('sold_pizzas', soldPizzas, 'sum', '1');
-      sendMetricToGrafana('revenue', totalRevenue, 'sum', '$');
-
-      return res.send({
-        order,
-        reportSlowPizzaToFactoryUrl: factoryData.reportUrl,
-        jwt: factoryData.jwt,
-      });
+    const order = await DB.addDinerOrder(req.user, orderReq);
+    const r = await fetch(`${config.factory.url}/api/order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },
+      body: JSON.stringify({ diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order }),
+    });
+    const j = await r.json();
+    if (r.ok) {
+      res.send({ order, reportSlowPizzaToFactoryUrl: j.reportUrl, jwt: j.jwt });
     } else {
-      failedPizzas++;
-      sendMetricToGrafana('failed_pizzas', failedPizzas, 'sum', '1');
-      return res.status(500).send({
-        message: 'Failed to fulfill order at factory',
-        reportPizzaCreationErrorToPizzaFactoryUrl: factoryData.reportUrl,
-      });
+      res.status(500).send({ message: 'Failed to fulfill order at factory', reportPizzaCreationErrorToPizzaFactoryUrl: j.reportUrl });
     }
   })
 );

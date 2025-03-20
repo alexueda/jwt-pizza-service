@@ -142,4 +142,5 @@ module.exports = {
   trackActiveUsers,
   trackAuthSuccess,
   trackAuthFail,
+  sendMetricToGrafana
 };

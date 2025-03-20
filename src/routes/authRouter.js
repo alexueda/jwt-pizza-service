@@ -4,9 +4,6 @@ const config = require('../config.js');
 const { asyncHandler } = require('../endpointHelper.js');
 const { DB, Role } = require('../database/database.js');
 
-// Import the tracking functions from your metrics module
-const { trackAuthSuccess, trackAuthFail } = require('../metrics');
-
 const authRouter = express.Router();
 
 authRouter.endpoints = [

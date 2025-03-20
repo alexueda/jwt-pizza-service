@@ -4,6 +4,8 @@ const { Role, DB } = require('../database/database.js');
 const { authRouter } = require('./authRouter.js');
 const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
 
+const { sendMetricToGrafana } = require('../metrics');// Import the sendMetricToGrafana function
+
 const orderRouter = express.Router();
 
 orderRouter.endpoints = [
@@ -77,6 +79,9 @@ orderRouter.post(
   '/',
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
+
+    const startTime = Date.now();
+    //start the timer
     const orderReq = req.body;
     const order = await DB.addDinerOrder(req.user, orderReq);
     const r = await fetch(`${config.factory.url}/api/order`, {
@@ -84,10 +89,23 @@ orderRouter.post(
       headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },
       body: JSON.stringify({ diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order }),
     });
+    //end the timer
+    const latency = Date.now() - startTime;
+    const pizzasSold = Array.isArray(req.body.items) ? req.body.items.length : 0;
+    const revenue = Array.isArray(req.body.items)
+    ? req.body.items.reduce((sum, item) => sum + Number(item.price), 0)
+    : 0;
+    //send to grafana
+    sendMetricToGrafana('pizzas_sold', pizzasSold, 'sum', '1');
+    sendMetricToGrafana('revenue', revenue, 'sum', '1');
+    sendMetricToGrafana('order_latency', latency, 'gauge', 'ms');
+
     const j = await r.json();
     if (r.ok) {
       res.send({ order, reportSlowPizzaToFactoryUrl: j.reportUrl, jwt: j.jwt });
     } else {
+      //send to grafana
+      sendMetricToGrafana('order_creation_failures', 1, 'sum', '1');
       res.status(500).send({ message: 'Failed to fulfill order at factory', reportPizzaCreationErrorToPizzaFactoryUrl: j.reportUrl });
     }
   })

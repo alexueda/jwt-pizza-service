@@ -47,18 +47,41 @@ setInterval(() => {
     sendMetricToGrafana('active_users', activeUsers, 'gauge', 'count');
 }, 60000);
 
-// Helper functions to update the counters
-function trackAuthSuccess() {
-  authSuccessAttempts++;
-}
-function trackAuthFail() {
-  authFailAttempts++;
+
+// Track authentication attempts(if this not working go to end point and check the status code)insted of middleway call function increma`=ent the value)
+function trackAuthAttempts(req, res, next) {
+  if (req.method === 'PUT' && req.url === '/api/auth') {
+    // Capture the response to determine success or failure
+    res.on('finish', () => {
+      if (res.statusCode === 200) {
+        successfulAuthAttempts++;
+      } else {
+        failedAuthAttempts++;
+      }
+    });
+  }
+  next();
 }
 
 setInterval(() => {
-  // Report authentication metrics
-  sendMetricToGrafana('auth_success_attempts', authSuccessAttempts, 'sum', '1');
-  sendMetricToGrafana('auth_fail_attempts', authFailAttempts, 'sum', '1');
+  sendMetricToGrafana('successful_auth_attempts', successfulAuthAttempts, 'sum', '1');
+  sendMetricToGrafana('failed_auth_attempts', failedAuthAttempts, 'sum', '1');
+  // Reset counters every minute
+  successfulAuthAttempts = 0;
+  failedAuthAttempts = 0;
+}, 60000);
+
+//Track Request Latency
+function trackLatency(req, res, next) {
+  const start = Date.now();
+  res.on('finish', () => {
+      serviceLatency = Date.now() - start;
+  });
+  next();
+}
+setInterval(() => {
+  sendMetricToGrafana('service_latency', serviceLatency, 'gauge', 'ms');
+  serviceLatency = 0;
 }, 60000);
   
 
@@ -140,7 +163,7 @@ function getCpuUsagePercentage() {
 module.exports = {
   requestTracker,
   trackActiveUsers,
-  trackAuthSuccess,
-  trackAuthFail,
+  trackAuthAttempts,
+  trackLatency,
   sendMetricToGrafana
 };

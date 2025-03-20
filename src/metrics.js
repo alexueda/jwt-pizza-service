@@ -70,7 +70,7 @@ function getCpuUsagePercentage() {
     sendMetricToGrafana('memory', getMemoryUsagePercentage(), 'gauge', '%');
   }, 1000);  
 
-// Track authentication attempts
+// Track authentication attempts(if this not working go to end point and check the status code)insted of middleway call function increma`=ent the value)
 function trackAuthAttempts(req, res, next) {
     if (req.method === 'PUT' && req.url === '/api/auth') {
       // Capture the response to determine success or failure
@@ -85,16 +85,15 @@ function trackAuthAttempts(req, res, next) {
     next();
   }
   
-  // Send authentication attempts to Grafana every minute
   setInterval(() => {
     sendMetricToGrafana('successful_auth_attempts', successfulAuthAttempts, 'sum', '1');
     sendMetricToGrafana('failed_auth_attempts', failedAuthAttempts, 'sum', '1');
-  
     // Reset counters every minute
     successfulAuthAttempts = 0;
     failedAuthAttempts = 0;
   }, 60000);
 
+//Track pizza metrics(do in the order router, in the end point grab value)
 function trackPizzaMetrics(req, res, next) {
     if (req.method === 'POST' && req.url === '/api/order') {
         const start = Date.now();

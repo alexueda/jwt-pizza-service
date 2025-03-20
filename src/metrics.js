@@ -7,9 +7,9 @@ let postRequests = 0;
 let putRequests = 0;
 let deleteRequests = 0;
 let activeUsers = 0;
-// Add these variables at the top
-let authSuccessAttempts = 0;
-let authFailAttempts = 0;
+let successfulAuthAttempts = 0;
+let failedAuthAttempts = 0;
+let serviceLatency = 0;
 
 function requestTracker(req, res, next) {
   totalRequests++;

@@ -1,5 +1,5 @@
 const express = require('express');
-const { requestTracker, trackActiveUsers, trackAuthAttempts, trackPizzaMetrics, trackLatency, trackPizzaLatency} = require('./metrics'); // Import the middleware functions
+const { requestTracker, trackActiveUsers, trackAuthAttempts, trackLatency } = require('./metrics'); // Import the middleware functions
 const { authRouter, setAuthUser } = require('./routes/authRouter.js');
 const orderRouter = require('./routes/orderRouter.js');
 const franchiseRouter = require('./routes/franchiseRouter.js');
@@ -10,12 +10,12 @@ const app = express();
 app.use(express.json());
 app.use(setAuthUser);
 
+//midleware
 app.use(requestTracker); // Add the requestTracker middleware
 app.use(trackActiveUsers); // Add the trackActiveUsers middleware
 app.use(trackAuthAttempts); // Add the trackAuthAttempts middleware
-app.use(trackPizzaMetrics); // Add the trackPizzaMetrics middleware
 app.use(trackLatency); // Add the trackLatency middleware
-app.use(trackPizzaLatency); // Add the trackPizzaLatency middleware
+
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');

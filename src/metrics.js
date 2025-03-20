@@ -7,6 +7,9 @@ let postRequests = 0;
 let putRequests = 0;
 let deleteRequests = 0;
 let activeUsers = 0;
+// Add these variables at the top
+let authSuccessAttempts = 0;
+let authFailAttempts = 0;
 
 function requestTracker(req, res, next) {
   totalRequests++;
@@ -42,6 +45,20 @@ function trackActiveUsers(req, res, next) {
 
 setInterval(() => {
     sendMetricToGrafana('active_users', activeUsers, 'gauge', 'count');
+}, 60000);
+
+// Helper functions to update the counters
+function trackAuthSuccess() {
+  authSuccessAttempts++;
+}
+function trackAuthFail() {
+  authFailAttempts++;
+}
+
+setInterval(() => {
+  // Report authentication metrics
+  sendMetricToGrafana('auth_success_attempts', authSuccessAttempts, 'sum', '1');
+  sendMetricToGrafana('auth_fail_attempts', authFailAttempts, 'sum', '1');
 }, 60000);
   
 
@@ -123,4 +140,6 @@ function getCpuUsagePercentage() {
 module.exports = {
   requestTracker,
   trackActiveUsers,
+  trackAuthSuccess,
+  trackAuthFail,
 };

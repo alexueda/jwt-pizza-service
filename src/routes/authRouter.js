@@ -4,6 +4,9 @@ const config = require('../config.js');
 const { asyncHandler } = require('../endpointHelper.js');
 const { DB, Role } = require('../database/database.js');
 
+// Import the tracking functions from your metrics module
+const { trackAuthSuccess, trackAuthFail } = require('../metrics');
+
 const authRouter = express.Router();
 
 authRouter.endpoints = [
@@ -80,10 +83,18 @@ authRouter.post(
 // login
 authRouter.put(
   '/',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req, res, next) => {
     const { email, password } = req.body;
-    const user = await DB.getUser(email, password);
-    const auth = await setAuth(user);
+    const user = await DB.getUser(email, password).catch((err) => {
+      trackAuthFail();
+      throw err;
+    });
+    const auth = await setAuth(user).catch((err) => {
+      trackAuthFail();
+      throw err;
+    });
+    // If we reach here, the login was successful
+    trackAuthSuccess();
     res.json({ user: user, token: auth });
   })
 );

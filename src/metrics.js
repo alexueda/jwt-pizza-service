@@ -7,13 +7,6 @@ let postRequests = 0;
 let putRequests = 0;
 let deleteRequests = 0;
 let activeUsers = 0;
-let successfulAuthAttempts = 0;
-let failedAuthAttempts = 0;
-let soldPizzas = 0;
-let failedPizzas = 0;
-let totalRevenue = 0.0;
-let serviceLatency = 0;
-let pizzaLatency = 0;
 
 function requestTracker(req, res, next) {
   totalRequests++;
@@ -50,117 +43,8 @@ function trackActiveUsers(req, res, next) {
 setInterval(() => {
     sendMetricToGrafana('active_users', activeUsers, 'gauge', 'count');
 }, 60000);
-
-// Provided CPU and memory functions
-function getCpuUsagePercentage() {
-    const cpuUsage = os.loadavg()[0] / os.cpus().length;
-    return cpuUsage.toFixed(2) * 100;
-  }
   
-  function getMemoryUsagePercentage() {
-    const totalMemory = os.totalmem();
-    const freeMemory = os.freemem();
-    const usedMemory = totalMemory - freeMemory;
-    const memoryUsage = (usedMemory / totalMemory) * 100;
-    return memoryUsage.toFixed(2);
-  }
 
-  setInterval(() => {
-    sendMetricToGrafana('cpu', getCpuUsagePercentage(), 'gauge', '%');
-    sendMetricToGrafana('memory', getMemoryUsagePercentage(), 'gauge', '%');
-  }, 1000);  
-
-// Track authentication attempts(if this not working go to end point and check the status code)insted of middleway call function increma`=ent the value)
-function trackAuthAttempts(req, res, next) {
-    if (req.method === 'PUT' && req.url === '/api/auth') {
-      // Capture the response to determine success or failure
-      res.on('finish', () => {
-        if (res.statusCode === 200) {
-          successfulAuthAttempts++;
-        } else {
-          failedAuthAttempts++;
-        }
-      });
-    }
-    next();
-  }
-  
-  setInterval(() => {
-    sendMetricToGrafana('successful_auth_attempts', successfulAuthAttempts, 'sum', '1');
-    sendMetricToGrafana('failed_auth_attempts', failedAuthAttempts, 'sum', '1');
-    // Reset counters every minute
-    successfulAuthAttempts = 0;
-    failedAuthAttempts = 0;
-  }, 60000);
-
-//Track pizza metrics(do in the order router, in the end point grab value)
-function trackPizzaMetrics(req, res, next) {
-    if (req.method === 'POST' && req.url === '/api/order') {
-        const start = Date.now();
-
-        res.on('finish', () => {
-            const latency = Date.now() - start;
-            if (res.statusCode === 200) {
-                try {
-                    const order = JSON.parse(res.locals.body).order;
-                    if (order) {
-                        const pizzasOrdered = order.items.length;
-                        soldPizzas += pizzasOrdered;
-                        const orderRevenue = order.items.reduce((sum, item) => sum + item.price, 0);
-                        totalRevenue += orderRevenue;
-                        sendMetricToGrafana('pizza_creation_latency', latency, 'gauge', 'ms');
-                    }
-                } catch (error) {
-                    console.error("Error parsing order response:", error);
-                    failedPizzas++;
-                }
-            } else {
-                failedPizzas++;
-            }
-        });
-    }
-    next();
-}
-
-setInterval(() => {
-    sendMetricToGrafana('sold_pizzas', soldPizzas, 'sum', '1');
-    sendMetricToGrafana('failed_pizzas', failedPizzas, 'sum', '1');
-    sendMetricToGrafana('revenue', totalRevenue, 'sum', '$');
-}, 60000);
-
-
-//Track Request Latency
-function trackLatency(req, res, next) {
-    const start = Date.now();
-    res.on('finish', () => {
-        serviceLatency = Date.now() - start;
-    });
-    next();
-}
-
-//Track Pizza Creation Latency
-function trackPizzaLatency(req, res, next) {
-    if (req.method === 'POST' && req.url === '/api/order') {
-        const start = Date.now();
-        res.on('finish', () => {
-            if (res.statusCode === 200) {
-                pizzaLatency = Date.now() - start;
-            }
-        });
-    }
-    next();
-}
-
-setInterval(() => {
-    sendMetricToGrafana('service_latency', serviceLatency, 'gauge', 'ms');
-    sendMetricToGrafana('pizza_creation_latency', pizzaLatency, 'gauge', 'ms');
-
-    serviceLatency = 0;
-    pizzaLatency = 0;
-}, 60000);
-
-
-// Send metric to Grafana
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
   const metric = {
     resourceMetrics: [
@@ -216,11 +100,27 @@ function sendMetricToGrafana(metricName, metricValue, type, unit) {
     });
 }
 
+// Provided CPU and memory functions
+function getCpuUsagePercentage() {
+    const cpuUsage = os.loadavg()[0] / os.cpus().length;
+    return cpuUsage.toFixed(2) * 100;
+  }
+  
+  function getMemoryUsagePercentage() {
+    const totalMemory = os.totalmem();
+    const freeMemory = os.freemem();
+    const usedMemory = totalMemory - freeMemory;
+    const memoryUsage = (usedMemory / totalMemory) * 100;
+    return memoryUsage.toFixed(2);
+  }
+
+  setInterval(() => {
+    sendMetricToGrafana('cpu', getCpuUsagePercentage(), 'gauge', '%');
+    sendMetricToGrafana('memory', getMemoryUsagePercentage(), 'gauge', '%');
+  }, 1000);  
+
+
 module.exports = {
   requestTracker,
   trackActiveUsers,
-  trackAuthAttempts,
-  trackPizzaMetrics,
-  trackLatency,
-  trackPizzaLatency
 };

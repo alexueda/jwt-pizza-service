@@ -94,6 +94,10 @@ orderRouter.post(
     const revenue = Array.isArray(req.body.items)
     ? req.body.items.reduce((sum, item) => sum + Number(item.price), 0)
     : 0;
+    //consloe statements
+    console.log('Order latency:', latency);
+    console.log('Pizzas sold:', pizzasSold);
+    console.log('Revenue:', revenue);
     //send to grafana
     sendMetricToGrafana('pizzas_sold', pizzasSold, 'sum', '1');
     sendMetricToGrafana('revenue', revenue, 'sum', '1');

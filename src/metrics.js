@@ -86,6 +86,7 @@ setInterval(() => {
   
 
 function sendMetricToGrafana(metricName, metricValue, type, unit) {
+  console.log('sendMetricToGrafana',metricName, metricValue, type, unit);//console statement
   const metric = {
     resourceMetrics: [
       {

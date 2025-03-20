@@ -83,19 +83,19 @@ authRouter.post(
 // login
 authRouter.put(
   '/',
-  asyncHandler(async (req, res, next) => {
+  asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-    const user = await DB.getUser(email, password).catch((err) => {
+    try {
+      const user = await DB.getUser(email, password);
+      const auth = await setAuth(user);
+      // Record a successful authentication attempt and send metric to Grafana
+      trackAuthSuccess();
+      res.json({ user, token: auth });
+    } catch (error) {
+      // Record a failed authentication attempt and send metric to Grafana
       trackAuthFail();
-      throw err;
-    });
-    const auth = await setAuth(user).catch((err) => {
-      trackAuthFail();
-      throw err;
-    });
-    // If we reach here, the login was successful
-    trackAuthSuccess();
-    res.json({ user: user, token: auth });
+      res.status(401).json({ message: 'Authentication failed' });
+    }
   })
 );
 

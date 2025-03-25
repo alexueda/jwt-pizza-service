@@ -5,6 +5,7 @@ const orderRouter = require('./routes/orderRouter.js');
 const franchiseRouter = require('./routes/franchiseRouter.js');
 const version = require('./version.json');
 const config = require('./config.js');
+const logger = require('./logger');// Import the logger module
 
 const app = express();
 app.use(express.json());
@@ -14,6 +15,8 @@ app.use(requestTracker); // Add the requestTracker middleware
 app.use(trackActiveUsers); // Add the trackActiveUsers middleware
 app.use(trackAuthAttempts); // Add the trackAuthAttempts middleware
 app.use(trackLatency); // Add the trackLatency middleware
+
+app.use(logger.httpLogger);// Add the httpLogger middleware
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -52,6 +55,7 @@ app.use('*', (req, res) => {
 
 // Default error handler for all exceptions and errors.
 app.use((err, req, res, next) => {
+  logger.unhandledErrorLogger(err);// Log the error
   res.status(err.statusCode ?? 500).json({ message: err.message, stack: err.stack });
   next();
 });

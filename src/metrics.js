@@ -33,6 +33,14 @@ setInterval(() => {
   sendMetricToGrafana('delete_requests', deleteRequests, 'sum', '1');
 }, 60000);
 
+setInterval(() => {
+  totalRequests = 0;
+  getRequests = 0;
+  postRequests = 0;
+  putRequests = 0;
+  deleteRequests = 0;
+}, 10 * 60 * 1000);
+
 // Track active users on login/logout
 function trackActiveUsers(req, res, next) {
     if (req.method === 'PUT' && req.url === '/api/auth') {
